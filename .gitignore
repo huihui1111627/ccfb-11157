@@ -16,3 +16,11 @@ node_modules/
 __pycache__/
 .venv/
 venv/
+
+# generated corpus, extracted results, review state
+data/corpus/
+data/store/
+data/work/
+data/eval/report.json
+
+*.egg-info/

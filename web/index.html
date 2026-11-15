@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>财报抽取复核台</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◧</span>
+    <div>
+      <h1>财报抽取复核台</h1>
+      <p class="sub">年报 PDF → 结构化三大报表 · 勾稽校验 · 人工复核</p>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-view="library">文档库</button>
+    <button class="tab" data-view="review">抽取结果</button>
+    <button class="tab" data-view="checks">勾稽校验</button>
+    <button class="tab" data-view="manual">人工复核</button>
+    <button class="tab" data-view="mapping">科目对照</button>
+    <button class="tab" data-view="accuracy">准确率</button>
+  </nav>
+  <div class="actions">
+    <label class="upload">
+      上传 PDF
+      <input type="file" id="file-input" accept="application/pdf" hidden>
+    </label>
+    <button id="import-corpus" class="ghost">导入样例</button>
+  </div>
+</header>
+
+<main id="app">
+  <!-- 文档库 -->
+  <section id="view-library" class="view active">
+    <div class="toolbar">
+      <h2>文档库</h2>
+      <div class="filters">
+        <input id="search" placeholder="搜索公司 / 文件名">
+        <select id="filter-kind">
+          <option value="">全部类型</option>
+          <option value="digital">电子版</option>
+          <option value="scanned">扫描版</option>
+        </select>
+        <select id="filter-status">
+          <option value="">全部状态</option>
+          <option value="error">有勾稽错误</option>
+          <option value="approved">已复核</option>
+        </select>
+      </div>
+      <span id="library-count" class="muted"></span>
+    </div>
+    <div id="doc-grid" class="doc-grid"></div>
+    <div id="library-empty" class="empty hidden">
+      <p>文档库还是空的。</p>
+      <p>点右上角「导入样例」载入 24 份合成年报，或上传自己的 PDF。</p>
+    </div>
+  </section>
+
+  <!-- 抽取结果 -->
+  <section id="view-review" class="view">
+    <div class="doc-header" id="review-doc-header"></div>
+    <div class="review-layout">
+      <aside class="stmt-nav" id="stmt-nav"></aside>
+      <div class="stmt-body">
+        <div class="stmt-toolbar" id="stmt-toolbar"></div>
+        <div class="table-wrap" id="stmt-table"></div>
+      </div>
+      <aside class="pdf-pane">
+        <div class="pdf-toolbar">
+          <button id="pdf-prev" class="icon" title="上一页">‹</button>
+          <span id="pdf-page-label" class="mono">—</span>
+          <button id="pdf-next" class="icon" title="下一页">›</button>
+          <span class="spacer"></span>
+          <label class="small"><input type="checkbox" id="pdf-textlayer" checked> 文本层</label>
+        </div>
+        <div class="pdf-scroll" id="pdf-scroll">
+          <div id="pdf-page" class="pdf-page"></div>
+        </div>
+        <div class="pdf-hint muted">点表格中的数字可定位到原文位置</div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 勾稽校验 -->
+  <section id="view-checks" class="view">
+    <div class="doc-header" id="checks-doc-header"></div>
+    <div class="checks-summary" id="checks-summary"></div>
+    <div id="checks-list" class="checks-list"></div>
+  </section>
+
+  <!-- 人工复核 -->
+  <section id="view-manual" class="view">
+    <div class="doc-header" id="manual-doc-header"></div>
+    <div class="manual-layout">
+      <div class="manual-main">
+        <div class="toolbar">
+          <h2>待处理事项</h2>
+          <div class="filters">
+            <select id="manual-filter">
+              <option value="all">全部</option>
+              <option value="error">勾稽错误</option>
+              <option value="lowconf">置信度偏低</option>
+              <option value="unmatched">未匹配科目</option>
+              <option value="edits">已修改</option>
+            </select>
+          </div>
+        </div>
+        <div id="manual-list" class="manual-list"></div>
+      </div>
+      <aside class="manual-side">
+        <h3>复核进度</h3>
+        <div class="progress"><div id="review-progress-bar"></div></div>
+        <p id="review-progress-text" class="muted"></p>
+        <div class="status-buttons">
+          <button data-status="in_progress" class="ghost">标记复核中</button>
+          <button data-status="approved" class="primary">通过复核</button>
+        </div>
+        <h3>导出</h3>
+        <button id="export-csv" class="ghost wide">导出 CSV</button>
+        <button id="download-json" class="ghost wide">导出 JSON</button>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 科目对照 -->
+  <section id="view-mapping" class="view">
+    <div class="toolbar">
+      <h2>科目对照</h2>
+      <input id="mapping-search" placeholder="搜索标准科目 / 别名">
+      <span class="muted" id="mapping-count"></span>
+    </div>
+    <div class="mapping-layout">
+      <div class="chart-panel">
+        <div id="chart-list" class="chart-list"></div>
+      </div>
+      <div class="mapping-detail">
+        <h3>本文档的标签映射</h3>
+        <p class="muted">同一份报告中，原文项目名到标准科目的对应关系。可在此修正后重新抽取。</p>
+        <div id="doc-mapping" class="doc-mapping"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 准确率 -->
+  <section id="view-accuracy" class="view">
+    <div class="toolbar">
+      <h2>抽取准确率</h2>
+      <span class="muted" id="accuracy-meta"></span>
+      <button id="rerun-eval" class="ghost">重新评测</button>
+    </div>
+    <div id="accuracy-summary" class="accuracy-summary"></div>
+    <div class="accuracy-grid">
+      <div class="card">
+        <h3>按报表</h3>
+        <div id="accuracy-by-statement"></div>
+      </div>
+      <div class="card">
+        <h3>按文档</h3>
+        <div id="accuracy-by-doc" class="scroll-y"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>按科目</h3>
+      <p class="muted">逐科目统计「抽取值与真实值完全一致」的比例，列出错误样例。</p>
+      <div id="accuracy-by-account"></div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
